@@ -58,6 +58,8 @@ void __nopoll_regression_on_close (noPollCtx * ctx, noPollConn * conn, noPollPtr
 
 nopoll_bool on_connection_opened (noPollCtx * ctx, noPollConn * conn, noPollPtr user_data)
 {
+	noPollConnOpts * opts;
+	
 	/* set connection close */
 	nopoll_conn_set_on_close (conn, __nopoll_regression_on_close, NULL);
 
@@ -72,6 +74,14 @@ nopoll_bool on_connection_opened (noPollCtx * ctx, noPollConn * conn, noPollPtr 
 			nopoll_conn_host (conn), nopoll_conn_get_host_header (conn), nopoll_conn_get_origin (conn));
 		return nopoll_false;
 	} /* end if */
+	
+	if (nopoll_cmp (nopoll_conn_get_origin (conn), "http://testing.URL.Redirection")) {
+		/* configure extra headers */
+		opts = nopoll_conn_opts_new ();
+		nopoll_conn_opts_set_extra_headers (opts, "\r\nLocation: http://localhost");
+		
+		return nopoll_false
+	}
 
 	/* get protocol to reply an especific case. This is an example
 	   on how to detect protocols requested by the client and how

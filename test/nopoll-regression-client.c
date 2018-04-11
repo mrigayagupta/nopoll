@@ -465,6 +465,53 @@ nopoll_bool test_02b (void) {
 	return nopoll_true;
 }
 
+/* Test URL redirection */
+
+nopoll_bool test_url_redirection (void) {
+	
+	noPollCtx  * ctx;
+	noPollConn * conn;
+	int status = 0;
+	char *message = NULL;
+
+	/* create context */
+	ctx = create_ctx ();
+
+	/* call to create a connection */
+	printf ("Test test_url_redirection: creating connection localhost:1234 (errno=%d)\n", errno);
+	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, "http://testing.URL.Redirection");
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error.. (conn=%p, conn->session=%d, NOPOLL_INVALID_SOCKET=%d, errno=%d, strerr=%s)..\n",
+			conn, (int) nopoll_conn_socket (conn), (int) NOPOLL_INVALID_SOCKET, errno, strerror (errno));
+		return nopoll_false;
+	}
+
+	printf ("Test test_url_redirection: waiting until connection is ok (errno=%d)\n", errno);
+	if (! nopoll_conn_wait_for_status_until_connection_ready (conn, 5, &status , &message)) {
+		printf ("ERROR: Failed to connect with server, got new server url %s with status code %d..\n",message,status);
+	}
+	
+	else {
+		printf("ERROR: Expected Connection to be failed but its success\n");
+		return nopoll_false;
+	}
+	
+	if (status != 0 && message != NULL) {
+		printf("Testing...\n");
+		//TODO
+	}
+	
+	
+
+	/* finish connection */
+	nopoll_conn_close (conn);
+	
+	/* finish */
+	nopoll_ctx_unref (ctx);
+
+	return nopoll_true;
+}
+
 
 nopoll_bool test_03 (void) {
 	noPollCtx  * ctx;
@@ -2907,6 +2954,15 @@ int main (int argc, char ** argv)
 #endif
 
 	printf ("INFO: starting tests with pid: %d\n", getpid ());
+	
+	if (test_url_redirection ()) {
+		printf ("Test test_url_redirection: Server URL redirection Support [   OK   ]\n");
+		return 0;
+	}else {
+		printf ("Test test_url_redirection: Server URL redirection Support [ FAILED ]\n");
+		return 0;
+	}
+	
 	if (test_01_strings ()) {
 		printf ("Test 01-strings: Library strings support [   OK   ]\n");
 	}else {

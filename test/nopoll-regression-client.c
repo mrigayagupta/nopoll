@@ -473,13 +473,15 @@ nopoll_bool test_url_redirection (void) {
 	noPollConn * conn;
 	int status = 0;
 	char *message = NULL;
+	char *redirect_url = NULL;
+	char *port = NULL;
 
 	/* create context */
 	ctx = create_ctx ();
 
 	/* call to create a connection */
-	printf ("Test test_url_redirection: creating connection localhost:1234 (errno=%d)\n", errno);
-	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, "http://testing.URL.Redirection");
+	printf ("Test test_url_redirection: creating connection localhost:6789 (errno=%d)\n", errno);
+	conn = nopoll_conn_new (ctx, "127.0.0.1", "6789", NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error.. (conn=%p, conn->session=%d, NOPOLL_INVALID_SOCKET=%d, errno=%d, strerr=%s)..\n",
 			conn, (int) nopoll_conn_socket (conn), (int) NOPOLL_INVALID_SOCKET, errno, strerror (errno));
@@ -487,22 +489,67 @@ nopoll_bool test_url_redirection (void) {
 	}
 
 	printf ("Test test_url_redirection: waiting until connection is ok (errno=%d)\n", errno);
-	if (! nopoll_conn_wait_for_status_until_connection_ready (conn, 5, &status , &message)) {
-		printf ("ERROR: Failed to connect with server, got new server url %s with status code %d..\n",message,status);
-	}
 	
-	else {
-		printf("ERROR: Expected Connection to be failed but its success\n");
-		return nopoll_false;
+	if (! nopoll_conn_wait_for_status_until_connection_ready (conn, 5, &status , &message)) {
+		printf ("INFO: Failed to connect with server, got new server url %s with status code %d..\n",message,status);
 	}
 	
 	if (status != 0 && message != NULL) {
-		printf("Testing...\n");
-		//TODO
+		if (status >= 300 && status <= 399) {
+			redirect_url = strchr(message, ':');
+			if (redirect_url) {
+				redirect_url += 8;
+				port = strchr (redirect_url, ':');
+				if (port){
+					int url_index = port - redirect_url;
+					*(redirect_url + (url_index)) = '\0';
+					port++;
+					printf("INFO: Extracted received URL is %s and port is %s .\n",redirect_url, port);
+				}
+				else {
+					printf("ERROR: Unable to get port number.\n");
+				}
+			}
+			else {
+				printf("ERROR: Unable to get redirection URL.\n");	
+			}
+		}
+		
+		if (!redirect_url || !port || (status < 300 || status > 399)) {
+			printf ("ERROR: Got Invalid data from server, closing the connection.\n");
+			/* finish connection */
+			nopoll_conn_close (conn);
+	
+			/* finish */
+			nopoll_ctx_unref (ctx);
+
+			return nopoll_false;
+		}
+	
+		printf("INFO: Connecting to new redirection URL.\n");
+		
+		nopoll_conn_close (conn);
+
+		/* call to create a connection */
+		
+		conn = nopoll_conn_new (ctx, redirect_url, port, NULL, NULL, NULL, NULL);
+		if (! nopoll_conn_is_ok (conn)) {
+			printf ("ERROR: Expected to find proper client connection status, but found error.. (conn=%p, conn->session=%d, NOPOLL_INVALID_SOCKET=%d, errno=%d, strerr=%s)..\n",
+			conn, (int) nopoll_conn_socket (conn), (int) NOPOLL_INVALID_SOCKET, errno, strerror (errno));
+			return nopoll_false;
+		}
+		
+		printf ("Test test_url_redirection: waiting until connection is ok (errno=%d)\n", errno);
+		if (! nopoll_conn_wait_until_connection_ready (conn, 5)) {
+			printf ("ERROR: failed to fully establish connection nopoll_conn_wait_until_connection_ready (conn, 5) failed..\n");
+		}
 	}
 	
+	else {
+		printf("ERROR: Expected redirection URL and status code as 3xx from server, but not received\n");
+		return nopoll_false;
+	}
 	
-
 	/* finish connection */
 	nopoll_conn_close (conn);
 	

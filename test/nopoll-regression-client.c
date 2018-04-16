@@ -563,8 +563,8 @@ nopoll_bool test_non_redirection_status (void) {
 	ctx = create_ctx ();
 
 	/* call to create a connection */
-	printf ("Test test_non_redirection_status: creating connection localhost:9876 (errno=%d)\n", errno);
-	conn = nopoll_conn_new (ctx, "localhost", "9876", NULL, NULL, NULL, NULL);
+	printf ("Test test_non_redirection_status: creating connection localhost:6789 (errno=%d)\n", errno);
+	conn = nopoll_conn_new (ctx, "localhost", "6789", NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error.. (conn=%p, conn->session=%d, NOPOLL_INVALID_SOCKET=%d, errno=%d, strerr=%s)..\n",
 			conn, (int) nopoll_conn_socket (conn), (int) NOPOLL_INVALID_SOCKET, errno, strerror (errno));

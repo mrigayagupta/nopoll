@@ -563,8 +563,8 @@ nopoll_bool test_non_redirection_status (void) {
 	ctx = create_ctx ();
 
 	/* call to create a connection */
-	printf ("Test test_non_redirection_status: creating connection localhost:6789 (errno=%d)\n", errno);
-	conn = nopoll_conn_new (ctx, "localhost", "6789", NULL, NULL, NULL, NULL);
+	printf ("Test test_non_redirection_status: creating connection localhost:9876 (errno=%d)\n", errno);
+	conn = nopoll_conn_new (ctx, "localhost", "9876", NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error.. (conn=%p, conn->session=%d, NOPOLL_INVALID_SOCKET=%d, errno=%d, strerr=%s)..\n",
 			conn, (int) nopoll_conn_socket (conn), (int) NOPOLL_INVALID_SOCKET, errno, strerror (errno));
@@ -3035,23 +3035,6 @@ int main (int argc, char ** argv)
 #endif
 
 	printf ("INFO: starting tests with pid: %d\n", getpid ());
-	
-	if (test_url_redirection ()) {
-		printf ("Test url_redirection: Server URL redirection Support [   OK   ]\n");
-	}else {
-		printf ("Test url_redirection: Server URL redirection Support [ FAILED ]\n");
-		return -1;
-	}
-	
-	if (test_non_redirection_status  ()) {
-		printf ("Test non_redirection_status: Server URL redirection Support for non_3xx status [   OK   ]\n");
-	}else {
-		printf ("Test non_redirection_status: Server URL redirection Support for non_3xx status [ FAILED ]\n");
-		return -1;
-	}
-	
-	
-	
 	if (test_01_strings ()) {
 		printf ("Test 01-strings: Library strings support [   OK   ]\n");
 	}else {
@@ -3102,6 +3085,20 @@ int main (int argc, char ** argv)
 		return -1;
 	}
 
+	/* test URL redirection with status code 3xx */
+	if (test_url_redirection ()) {
+		printf ("Test url_redirection: Server URL redirection Support [   OK   ]\n");
+	}else {
+		printf ("Test url_redirection: Server URL redirection Support [ FAILED ]\n");
+		return -1;
+	}
+	
+	if (test_non_redirection_status  ()) {
+		printf ("Test non_redirection_status: Server support for non_101 status [   OK   ]\n");
+	}else {
+		printf ("Test non_redirection_status: Server support for non_101 status [ FAILED ]\n");
+		return -1;
+	}
 	/* test sending pong (without ping) */
 
 	/* test streaming api */

@@ -15,7 +15,7 @@ static noPollHostValidationStatus nopoll_cert_subject_alt_name_host_check(const 
 static noPollHostValidationStatus nopoll_cert_common_name_host_check(const X509 *server_cert, const char *hostname) 
 {
 	int cn_last_pos = -1;
-	char *cn_data = NULL;
+	const char *cn_data = NULL;
 	X509_NAME_ENTRY *cn_entry = NULL;
 	ASN1_STRING *cn_asn1_val = NULL;
 
@@ -81,7 +81,6 @@ static noPollHostValidationStatus nopoll_cert_subject_alt_name_host_check(const 
     /* Check each name within the extension*/
     while (sk_GENERAL_NAME_num(san_gen_names) > 0) {
         general_name_value = sk_GENERAL_NAME_pop(san_gen_names);
-
         if (general_name_value->type == GEN_DNS) {
            /* Current name is a DNS name, let's check it*/
 	#if OPENSSL_VERSION_NUMBER >= 0x010100000L

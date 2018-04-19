@@ -41,7 +41,8 @@ static int nopoll_get_delimeter_count(char * string, char *delimeter) {
 		string++;
 	}
 	return count;
-} 
+}
+
 int nopoll_hostname_compare_without_wildcard(char *pattern, char *hostname) {
   	while (*pattern != '\0' && *hostname != '\0') {
 		if( nopoll_to_lower(*pattern) != nopoll_to_lower(*hostname) ){
@@ -64,11 +65,16 @@ int nopoll_hostname_compare_with_wildcard(char *pattern, char *hostname) {
 	/* Get string after two dots (.) for comparison (without wildcard)
 	* as to long wildcard is not supported */
 	p_split_first = strchr(pattern, '.');
-	p_split_second = strchr(++p_split_first, '.');
-
 	h_split_first = strchr(hostname,'.');
-	h_split_second = strchr(++h_split_first, '.');
 
+	if (p_split_first != NULL && h_split_first != NULL) {
+		p_split_second = strchr(++p_split_first, '.');
+		h_split_second = strchr(++h_split_first, '.');
+	}
+	else {
+		return 0;
+	}
+	
 	if (p_split_second && h_split_second) {
 		cmp_result = nopoll_hostname_compare_without_wildcard(++p_split_second, ++h_split_second);
 		if (!cmp_result){
@@ -76,10 +82,8 @@ int nopoll_hostname_compare_with_wildcard(char *pattern, char *hostname) {
 		}
 	}
 	else {
-		printf("Should contain atleast two dots (.) in the string \n");
 		return 0;
 	}
-
 	/* Get string till two dots (.) for wild card comparison */
 	int p_index = p_split_second - pattern;
 	int h_index = h_split_second - hostname;
@@ -94,41 +98,41 @@ int nopoll_hostname_compare_with_wildcard(char *pattern, char *hostname) {
 			hostname++;
 		}
 		/* check if hostname contains wildcard */
-		else if (*hostname == '*') {
+		else if (*pattern == '*') {
 
-			if(*(++hostname) == '.') {
+			if(*(++pattern) == '.') {
 				/* If hostname contains only * in first octet then skip all charecters in pattern
 				* Then do comparison of next octet*/
 				if (split_count == 0) {
- 					p_index = p_split_first - pattern;
- 					pattern += p_index;
- 					++hostname;
+ 					h_index = h_split_first - hostname;
+ 					hostname += h_index;
+ 					++pattern;
  				}
  				else {
- 					p_index = p_split_second - pattern;
- 					pattern += p_index;
- 					if (*pattern == '\0') {
+ 					h_index = h_split_second - hostname;
+ 					hostname += h_index;
+ 					if (*hostname == '\0') {
  						return 1;
  					}
 				}
 			}
 			else {
 				/* Will support partial wildcard comparison */
-				char *h_part = strchr(hostname, '.');
-				h_index = h_part - hostname;
+				char *p_part = strchr(pattern, '.');
+				p_index = p_part - pattern;
 
 				/* Skip all charecters in pattern and compare the charecters remained after '*' in hostname string */
-				while (*(pattern + h_index) != '.'){
-					pattern++;
+				while (*(hostname + p_index) != '.'){
+					hostname++;
 				}
 
-				while (h_index) {
+				while (p_index) {
 					if ( nopoll_to_lower(*hostname) != nopoll_to_lower(*pattern)) {
 						return 0;
 					}
 					pattern++;
 					hostname++;
-					h_index -= 1;
+					p_index -= 1;
 				}
 			}
 			/* After first octet comparison make this on, so that wildcard comparison for next octet will get rejected */
@@ -147,8 +151,8 @@ int nopoll_hostname_compare_with_wildcard(char *pattern, char *hostname) {
 	}
 }
 
-static int nopoll_validate_ipv4(char *hostname){
-	int octets = 0,octet_digits = 0;
+static int nopoll_validate_ipv4(char *ip_addr){
+	int octets = 0;
 	char delimeter[] = {"."};
 	unsigned char *ip_val;
 
@@ -156,41 +160,33 @@ static int nopoll_validate_ipv4(char *hostname){
 	ip_val = tmp;
 	*ip_val = 0;
 
-	char *host_tmp = hostname;
+	char *ip_addr_tmp = ip_addr;
 
-	octets = nopoll_get_delimeter_count(host_tmp, delimeter);
+	octets = nopoll_get_delimeter_count(ip_addr_tmp, delimeter);
 	if (octets != 3){
-		printf("Octets are more or less than 3, Invalid IP.\n");
 		return 0;
 	}
 
-	const char *ip_ptr = strchr(host_tmp,'.');
-	octet_digits = ip_ptr - host_tmp;
-	if (octet_digits >3){
-		printf("No. of digits are more than 3 in one octet, Invalid IP.\n");
-		return 0;
-	}
+	while (*ip_addr_tmp != '\0'){
 
-	while (*host_tmp != '\0'){
-
-		if(!isdigit(*host_tmp)){
+		if(!isdigit(*ip_addr_tmp)){
 			return 0;
 		}
 
-		while ( (*host_tmp != *delimeter) && (*host_tmp != '\0')) {
-			unsigned int val = (*ip_val) * 10 + (unsigned int)(*host_tmp - '0') ;
+		while ( (*ip_addr_tmp != *delimeter) && (*ip_addr_tmp != '\0')) {
+			unsigned int val = (*ip_val) * 10 + (unsigned int)(*ip_addr_tmp - '0') ;
 			*ip_val = val;
-			host_tmp++;
+			ip_addr_tmp++;
 
 			if(val >255){
-				printf("val %u is greater than 255\n",val);
 				return 0;
 			}
 		}
-		
-		if(*host_tmp != '\0'){
+		if((*ip_addr_tmp == *delimeter) && (*(ip_addr_tmp+1) == '\0'))
+			return 0;
+		if(*ip_addr_tmp != '\0'){
 			*ip_val = 0;
-			host_tmp++;
+			ip_addr_tmp++;
 		}
 	}
 	return 1;

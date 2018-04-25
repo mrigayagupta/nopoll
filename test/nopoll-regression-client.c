@@ -248,12 +248,12 @@ nopoll_bool test_01_hostname_check (void) {
     {
 		printf ("ERROR (1): expected to match hostname validation example.com..\n");
 		return nopoll_false;
-	}/*
+	}
 	if(! nopoll_match_hostname("fe80::3285:a9ff:fe46:b619","fe80::3285:a9ff:fe46:b619"))
     {
 		printf ("ERROR (1): expected to match hostname validation fe80::3285:a9ff:fe46:b619..\n");
 		return nopoll_false;
-	}*/
+	}
 
     /*Failure case*/
 
@@ -317,11 +317,11 @@ nopoll_bool test_01_hostname_check (void) {
 		printf ("ERROR (1): expected to not match hostname validation * with www\n");
 		return nopoll_false;
 	}
-	/*if(nopoll_match_hostname("*::3285:a9ff:fe46:b619","fe80::3285:a9ff:fe46:b619"))
+	if(nopoll_match_hostname("*::3285:a9ff:fe46:b619","fe80::3285:a9ff:fe46:b619"))
     {
 		printf ("ERROR (1): expected to not match hostname validation *::3285:a9ff:fe46:b619 with  fe80::3285:a9ff:fe46:b619 \n");
 		return nopoll_false;
-	}*/
+	}
 	if(nopoll_match_hostname("*.168.0.0" , "192.168.0.0"))
     {
 		printf ("ERROR (1): expected to not match hostname validation *.168.0.0 with 192.168.0.0\n");

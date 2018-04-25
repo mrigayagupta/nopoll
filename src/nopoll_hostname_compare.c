@@ -1,31 +1,10 @@
-/***************************************************************************
- *
- * Copyright (C) 1998 - 2017, Daniel Stenberg, <daniel@haxx.se>, et al.
- *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution. The terms
- * are also available at https://curl.haxx.se/docs/copyright.html.
- *
- * You may opt to use, copy, modify, merge, publish, distribute and/or sell
- * copies of the Software, and permit persons to whom the Software is
- * furnished to do so, under the terms of the COPYING file.
- *
- * This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY
- * KIND, either express or implied.
- *
- ***************************************************************************/
-
 #include <nopoll_hostname_validation.h>
-#include <string.h>
-#include <stdlib.h>
-#include <ctype.h>
 
-static char nopoll_to_lower(char ch);
 static int nopoll_get_delimeter_count(char * string, char *delimeter);
 static int  nopoll_validate_ipv4(char *hostname);
 static int nopoll_validate_ipv6(char *hostname);
 
-static char nopoll_to_lower(char ch)
+char nopoll_to_lower(char ch)
 {
   if(ch >= 'A' && ch <= 'Z')
     return (char)('a' + ch - 'A');
@@ -62,7 +41,7 @@ int nopoll_hostname_compare_with_wildcard(char *pattern, char *hostname) {
 	int split_count = 0;
 	char *p_split_first, *p_split_second, *h_split_first, *h_split_second;
 
-	/* Get string after two dots (.) for comparison (without wildcard)
+	/* Get the string after two dots (.) for comparison (without wildcard)
 	* as to long wildcard is not supported */
 	p_split_first = strchr(pattern, '.');
 	h_split_first = strchr(hostname,'.');
@@ -182,6 +161,7 @@ static int nopoll_validate_ipv4(char *ip_addr){
 				return 0;
 			}
 		}
+		/* IP should not end with . */
 		if((*ip_addr_tmp == *delimeter) && (*(ip_addr_tmp+1) == '\0'))
 			return 0;
 		if(*ip_addr_tmp != '\0'){
@@ -192,9 +172,72 @@ static int nopoll_validate_ipv4(char *ip_addr){
 	return 1;
 }
 
-static int  nopoll_validate_ipv6(char *hostname){
-	/*TODO;*/
-	return 0;
+static int  nopoll_validate_ipv6(char *ip_addr){
+	int octets = 0, colon_count =0, chr_count = 0, octet_count = 0;
+	char *ip_addr_rem = NULL;
+	nopoll_bool ipv4_valid = nopoll_false;
+	static char ip_digits[] = "0123456789abcdef";
+
+	char *ip_addr_tmp = ip_addr;
+	/* If ip starts with ":"" then next chr should be ":"" only */
+	if (*ip_addr_tmp == ':' && *(ip_addr_tmp+1) != ':'){
+		return 0;
+	}
+
+	octets = nopoll_get_delimeter_count(ip_addr_tmp, ":");
+	if (octets > 7)
+		return 0;
+
+	while (*ip_addr_tmp != '\0'){
+
+		while((*ip_addr_tmp != ':') &&  (*ip_addr_tmp != '\0')){
+			if (strchr(ip_digits, nopoll_to_lower(*ip_addr_tmp))){
+				ip_addr_tmp++;
+				chr_count +=1;
+				/* octet length should not be more than 4 */
+				if (chr_count > 4)
+					return 0;
+			}
+			else if (*ip_addr_tmp == '.')
+				break;
+			else
+				return 0;
+		}
+
+		if (*ip_addr_tmp == ':') {
+			if (*(ip_addr_tmp+1) == '\0' && colon_count == 0){
+				return 0;
+			}
+			/* Ipv6 should not contain "::" (consecutive zero's representation) more than one */
+			if (*(ip_addr_tmp+1) == ':') {
+				colon_count +=1;
+				if(colon_count >1)
+					return 0;
+			}
+			ip_addr_tmp++;
+			ip_addr_rem = ip_addr_tmp;
+			chr_count = 0;
+			octet_count +=1;
+			continue;
+		}
+		/* validate ipv6 dual addressing support (IPv6 + IPv4) */
+		if (*ip_addr_tmp == '.'){
+			if (octet_count > 6)
+				return 0;
+			if(colon_count ==0 && octet_count < 6)
+				return 0;
+
+			if(nopoll_validate_ipv4(ip_addr_rem) > 0) {
+				ipv4_valid = nopoll_true;
+				break;
+			}
+			return 0;
+		}
+	}
+
+	if(colon_count == 0 && octet_count != 7 && !ipv4_valid)
+		return 0;
+	return 1;
 }
 
 int nopoll_hostname_validate_inet(int addr_fam, char *hostname) {

@@ -1,4 +1,3 @@
-
 #include <nopoll_hostname_validation.h>
 
 static noPollHostValidationStatus nopoll_cert_common_name_host_check(const X509 *server_cert, const char *hostname);
